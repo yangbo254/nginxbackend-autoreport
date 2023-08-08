@@ -1,0 +1,22 @@
+name: Docker Image CI
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+jobs:
+
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Build the Docker image
+      run: |
+        docker build . --file Dockerfile --tag nginxbackend_autoreport:latest
+        docker login -u ${{ secrets.DOCKER_IO_ACCESS }} -p ${{ secrets.DOCKER_IO_ACCESS_TOKEN }}
+        docker tag nginxbackend_autoreport:latest piseth169k/nginxbackend_autoreport:latest
+        docker push piseth169k/nginxbackend_autoreport:latest
