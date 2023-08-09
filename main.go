@@ -18,7 +18,7 @@ import (
 )
 
 func ReportOnlineServer(currentAddr, remoteServerPath, reportServerAddr string) []string {
-	req, err := http.NewRequest("GET", fmt.Sprintf("http://%s/getonlinereportserver", reportServerAddr), nil)
+	req, err := http.NewRequest("GET", fmt.Sprintf("http://%s/autoreport", reportServerAddr), nil)
 	if err != nil {
 		fmt.Println(err)
 		return nil
