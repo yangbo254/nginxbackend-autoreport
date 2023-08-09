@@ -106,7 +106,7 @@ func main() {
 	}
 
 	log.Println("check current config file...")
-	if ReadAndChangeConfig("config/config.yaml", GetCurrentIp("172.31")) {
+	if ReadAndChangeConfig("/config.yaml", GetCurrentIp("172.31")) {
 		RestartDockerContainer(os.Getenv("target_container_name"))
 	}
 
