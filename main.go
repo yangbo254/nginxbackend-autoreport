@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net"
 	"net/http"
 	"os"
@@ -38,7 +39,7 @@ func ReportOnlineServer(currentAddr, remoteServerPath, reportServerAddr string) 
 func GetCurrentIp(prefix string) string {
 	addrs, err := net.InterfaceAddrs()
 	if err != nil {
-		fmt.Println("Error:", err)
+		log.Println("Error:", err)
 		return ""
 	}
 
@@ -55,18 +56,24 @@ func GetCurrentIp(prefix string) string {
 	return ""
 }
 
-func ReadAndChangeConfig(filePath, currentIp string) {
+func ReadAndChangeConfig(filePath, currentIp string) bool {
 	filename := filePath // 替换成你要操作的文件名
 
 	// 读取文件内容
 	content, err := ioutil.ReadFile(filename)
 	if err != nil {
-		fmt.Println("Error reading file:", err)
-		return
+		log.Println("Error reading file:", err)
+		return false
 	}
 
 	// 将内容转换为字符串
 	fileContent := string(content)
+
+	// 检查内容是否有特定字符串
+	if !strings.Contains(fileContent, "172.31.10.7") {
+		log.Println("config file is ok")
+		return false
+	}
 
 	// 替换内容
 	newContent := strings.Replace(fileContent, "172.31.10.7", currentIp, -1)
@@ -74,11 +81,12 @@ func ReadAndChangeConfig(filePath, currentIp string) {
 	// 将新内容写入文件
 	err = ioutil.WriteFile(filename, []byte(newContent), 0644)
 	if err != nil {
-		fmt.Println("Error writing file:", err)
-		return
+		log.Println("Error writing file:", err)
+		return false
 	}
 
-	fmt.Println("File content replaced and saved successfully.")
+	log.Println("File content replaced and saved successfully.")
+	return true
 }
 
 func main() {
@@ -86,16 +94,50 @@ func main() {
 	signal.Notify(signalChannel, syscall.SIGTERM)
 	go func() {
 		<-signalChannel
-		fmt.Println("Received SIGTERM. Cleaning up...")
+		log.Println("Received SIGTERM. Cleaning up...")
 		// 这里可以执行一些清理操作，然后退出程序
 		os.Exit(0)
 	}()
-	ReadAndChangeConfig("config/config.yaml", GetCurrentIp("172.31"))
+
+	log.Println("check current network...")
+	if GetCurrentIp("172.31") == "" {
+		log.Println("Not in the right network")
+		os.Exit(0)
+	}
+
+	log.Println("check current config file...")
+	if ReadAndChangeConfig("config/config.yaml", GetCurrentIp("172.31")) {
+		RestartDockerContainer(os.Getenv("target_container_name"))
+	}
+
+	log.Println("wait 30 seconds and check the port...")
+	time.Sleep(30 * time.Second)
+
+	tryCount := 0
+	checkCount := 0
+	log.Println("begin check logic, loop with 3 second...")
 	for {
-		reportServerAddr := os.Getenv("report_server_addr")
-		currentAddr := fmt.Sprintf("%s:%s,%d", GetCurrentIp("172.31"), os.Getenv("server_port"), runtime.GOMAXPROCS(0))
-		remoteServerPath := os.Getenv("server_path")
-		ReportOnlineServer(currentAddr, remoteServerPath, reportServerAddr)
+		if CheckNet(10001) && CheckNet(10002) && CheckNet(10003) {
+			reportServerAddr := os.Getenv("report_server_addr")
+			currentAddr := fmt.Sprintf("%s:%s,%d", GetCurrentIp("172.31"), os.Getenv("server_port"), runtime.GOMAXPROCS(0))
+			remoteServerPath := os.Getenv("server_path")
+			ReportOnlineServer(currentAddr, remoteServerPath, reportServerAddr)
+			if checkCount%20 == 0 {
+				log.Println("The current check is correct")
+			}
+			checkCount++
+		} else {
+			checkCount = 0
+			tryCount++
+			log.Println("check failed... try count:", tryCount)
+
+			if tryCount > 5 {
+				log.Println("network check failed,try restart container and kill current task...")
+				RestartDockerContainer(os.Getenv("target_container_name"))
+				os.Exit(0)
+			}
+		}
+
 		time.Sleep(3 * time.Second)
 	}
 }
