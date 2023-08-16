@@ -48,6 +48,7 @@ func GetCurrentIp(prefix string) string {
 		// 检查地址是否为 IP 地址，并且不是回环地址
 		if ipNet, ok := addr.(*net.IPNet); ok && !ipNet.IP.IsLoopback() {
 			if ipNet.IP.To4() != nil {
+				log.Println("IP:", ipNet.IP.String())
 				if strings.HasPrefix(ipNet.IP.String(), prefix) {
 					return ipNet.IP.String()
 				}
