@@ -15,9 +15,9 @@ import (
 )
 
 const (
-	ENV_REPORT_SERVER_ADDR = "report_server_addr"
-	ENV_SERVER_PORT        = "server_port"
-	ENV_PRE_IP_FORMAT      = "pre_ip_format"
+	ENV_REPORT_SERVER_ADDR = "report_server_addr" // 上报服务器地址
+	ENV_SERVER_PORT        = "server_port"        // 服务端口
+	ENV_PRE_IP_FORMAT      = "pre_ip_format"      // ip前缀
 	ENV_CONFIG_FILE        = "config_file"
 	ENV_CHECK_PORT         = "check_ports"
 	ENV_SERVER_PATH        = "server_path"
@@ -62,6 +62,7 @@ func main() {
 	}
 
 	log.Println("check current network...")
+	log.Println("preIpFormat:", preIpFormat)
 	if GetCurrentIp(preIpFormat) == "" {
 		log.Println("Not in the right network")
 		os.Exit(0)
